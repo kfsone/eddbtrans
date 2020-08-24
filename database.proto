@@ -1,0 +1,205 @@
+syntax = "proto3";
+package main;
+
+option go_package = "github.com/kfsone/eddbtrans;main";
+
+message Government {
+  enum Type {
+    None = 0;
+    Anarchy = 1;
+    Communism = 2;
+    Confederacy = 3;
+    Cooperative = 4;
+    Corporate = 5;
+    Democracy = 6;
+    Dictatorship = 7;
+    Feudal = 8;
+    Patronage = 9;
+    Prison = 10;
+    PrisonColony = 11;
+    Theocracy = 12;
+  };
+  Type type = 1;
+}
+
+message Allegiance {
+  enum Type {
+    None = 0;
+    Alliance = 1;
+    Empire = 2;
+    Federation = 3;
+    Independent = 4;
+    PilotsFederation = 5;
+  };
+  Type type = 1;
+};
+
+
+message System {
+  uint64 id = 1;
+  string name = 2;
+  uint64 updated = 3;
+
+  message Coordinates {
+    double x = 1;
+    double y = 2;
+    double z = 3;
+  };
+  Coordinates position = 4;
+
+  bool isPopulated = 5;
+  bool needsPermit = 6;
+
+  message Security {
+    enum Type {
+      None = 0;
+      Anarchy = 1;
+      Low = 2;
+      Medium = 3;
+      High = 4;
+    };
+    Type type = 1;
+  };
+  Security security = 7;
+
+  message Power {
+    enum State {
+      None = 0;
+      Contested = 1;
+      Control = 2;
+      Expansion = 3;
+      Exploited = 4;
+    };
+    State state = 1;
+  }
+  Power power = 8;
+
+  Government government = 9;
+  Allegiance allegiance = 10;
+
+  uint64 edsmId = 11;
+  uint64 edSystemAddress = 12;
+};
+
+message Station {
+  uint64 id = 1;
+  string name = 2;
+  uint64 updated = 3;
+  uint64 system_id = 4;
+
+  enum Type {
+    None = 0;
+    AsteroidBase = 1;
+    CivilianOutpost = 2;
+    CommercialOutpost = 3;
+    CoriolisStarport = 4;
+    FleetCarrier = 5;
+    IndustrialOutpost = 6;
+    Megaship = 7;
+    MilitaryOutpost = 8;
+    MiningOutpost = 9;
+    OcellusStarport = 10;
+    OrbisStarport = 11;
+    PlanetaryOutpost = 12;
+    PlanetaryPort = 13;
+    PlanetarySettlement = 14;
+    ScientificOutpost = 15;
+  };
+  Type type = 5;
+
+  message Features {
+    bool hasMarket = 1;
+    bool hasBlackmarket = 2;
+    bool hasRefuel = 3;
+    bool hasRepair = 4;
+    bool hasRearm = 5;
+    bool hasOutfitting = 6;
+    bool hasShipyard = 7;
+    bool hasDocking = 8;
+    bool hasCommodities = 9;
+    bool isPlanetary = 10;
+
+    message Pad {
+      enum Type {
+        None = 0;
+        Small = 1;
+        Medium = 2;
+        Large = 3;
+      };
+      Type type = 1;
+    };
+
+    Pad pad = 11;
+  };
+  Features features = 6;
+
+  float lsToStar = 7;
+  Government government = 8;
+  Allegiance allegiance = 9;
+
+  uint64 edMarketId = 10;
+};
+
+message Commodity {
+  enum Category {
+    None = 0;
+    Chemicals = 1;
+    ConsumerItems = 2;
+    LegalDrugs = 3;
+    Foods = 4;
+    IndustrialMaterials = 5;
+    Machinery = 6;
+    Medicines = 7;
+    Metals = 8;
+    Minerals = 9;
+    Slavery = 10;
+    Technology = 11;
+    Textiles = 12;
+    Waste = 13;
+    Weapons = 14;
+    Unknown = 15;
+    Salvage = 16;
+  };
+
+  uint32 id = 1;
+  string name = 2;
+  Category category = 3;
+  bool isRare = 4;
+  bool isMarketable = 5;
+  uint32 averagePrice = 6;
+  uint64 edId = 7;
+  message Pricing {
+    uint32 lower = 1;
+    uint32 upper = 2;
+  };
+  Pricing buy = 8;
+  Pricing sell = 9;
+};
+
+message StationListing {
+  message Listing {
+    message Capacity {
+      enum Bracket {
+        None = 0;
+        Low = 1;
+        Med = 2;
+        High = 3;
+      };
+
+      // Which supply/demand bracket is the item in?
+      Bracket bracket = 1;
+      // How many units are wanted/available.
+      uint32 units = 2;
+      // Asking/offering price.
+      uint32 credits = 3;
+    };
+
+    uint32 commodityId = 1;
+    Capacity supply = 2;
+    Capacity demand = 3;
+    uint64 collected = 4;
+  };
+
+  uint64 stationId = 1;
+  repeated Listing listings = 2;
+};
