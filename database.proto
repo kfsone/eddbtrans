@@ -1,7 +1,9 @@
-syntax = "proto3";
-package main;
+//+build !test
 
-option go_package = "github.com/kfsone/eddbtrans;main";
+syntax = "proto3";
+package eddbtrans;
+
+option go_package = "github.com/kfsone/eddbtrans;eddbtrans";
 
 message Government {
   enum Type {
@@ -89,21 +91,21 @@ message Station {
 
   enum Type {
     None = 0;
-    AsteroidBase = 1;
-    CivilianOutpost = 2;
-    CommercialOutpost = 3;
-    CoriolisStarport = 4;
-    FleetCarrier = 5;
-    IndustrialOutpost = 6;
-    Megaship = 7;
-    MilitaryOutpost = 8;
-    MiningOutpost = 9;
-    OcellusStarport = 10;
-    OrbisStarport = 11;
-    PlanetaryOutpost = 12;
-    PlanetaryPort = 13;
-    PlanetarySettlement = 14;
-    ScientificOutpost = 15;
+    CivilianOutpost = 1;
+    CommercialOutpost = 2;
+    CoriolisStarport = 3;
+    IndustrialOutpost = 4;
+    MilitaryOutpost = 5;
+    MiningOutpost = 6;
+    OcellusStarport = 7;
+    OrbisStarport = 8;
+    ScientificOutpost = 9;
+    PlanetaryOutpost = 13;
+    PlanetaryPort = 14;
+    PlanetarySettlement = 16;
+    Megaship = 19;
+    AsteroidBase = 20;
+    FleetCarrier = 24;
   };
   Type type = 5;
 
@@ -119,17 +121,14 @@ message Station {
     bool hasCommodities = 9;
     bool isPlanetary = 10;
 
-    message Pad {
-      enum Type {
-        None = 0;
-        Small = 1;
-        Medium = 2;
-        Large = 3;
-      };
-      Type type = 1;
+    enum PadSize {
+      None = 0;
+      Small = 1;
+      Medium = 2;
+      Large = 3;
     };
 
-    Pad pad = 11;
+    PadSize pad = 11;
   };
   Features features = 6;
 

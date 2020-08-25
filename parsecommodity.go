@@ -1,4 +1,4 @@
-package main
+package eddbtrans
 
 import (
 	"errors"
@@ -27,13 +27,13 @@ func ParseCommodityJson(source io.Reader) (<-chan []byte, error) {
 			}
 			values := value.Map()
 			data, err := proto.Marshal(&Commodity{
-				Id: uint32(values["id"].Uint()),
-				Name: values["name"].String(),
-				Category: Commodity_Category(values["category_id"].Uint()),
-				IsRare: values["is_rare"].Bool(),
+				Id:           uint32(values["id"].Uint()),
+				Name:         values["name"].String(),
+				Category:     Commodity_Category(values["category_id"].Uint()),
+				IsRare:       values["is_rare"].Bool(),
 				IsMarketable: !values["is_non_marketable"].Bool(),
 				AveragePrice: uint32(values["average_price"].Uint()),
-				EdId: values["ed_id"].Uint(),
+				EdId:         values["ed_id"].Uint(),
 			})
 			if err != nil {
 				panic(err)
