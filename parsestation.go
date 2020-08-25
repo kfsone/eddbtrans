@@ -27,8 +27,8 @@ func getPadSize(padSize string) Station_Features_PadSize {
 	}
 }
 
-func ParseStationsJsonl(source io.Reader) (<-chan []byte, error) {
-	channel := make(chan []byte, 4)
+func ParseStationsJsonl(source io.Reader) (<-chan Message, error) {
+	channel := make(chan Message, 4)
 
 	go func() {
 		defer close(channel)
@@ -61,7 +61,7 @@ func ParseStationsJsonl(source io.Reader) (<-chan []byte, error) {
 			if err != nil {
 				panic(err)
 			} else {
-				channel <- data
+				channel <- Message{station[0].Uint(), data}
 			}
 		}
 	}()

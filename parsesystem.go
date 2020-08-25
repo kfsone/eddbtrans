@@ -103,8 +103,8 @@ func getAllegianceType(jsonId uint64) Allegiance_Type {
 	}
 }
 
-func ParseSystemsPopulatedJsonl(source io.Reader) (<-chan []byte, error) {
-	channel := make(chan []byte, 4)
+func ParseSystemsPopulatedJsonl(source io.Reader) (<-chan Message, error) {
+	channel := make(chan Message, 4)
 	go func() {
 		defer close(channel)
 		systems := ParseJsonLines(source, getSystemFields())
@@ -126,7 +126,7 @@ func ParseSystemsPopulatedJsonl(source io.Reader) (<-chan []byte, error) {
 			if err != nil {
 				panic(err)
 			} else {
-				channel <- data
+				channel <- Message{systemJson[0].Uint(), data}
 			}
 		}
 	}()
