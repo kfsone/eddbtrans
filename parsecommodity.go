@@ -2,10 +2,11 @@ package eddbtrans
 
 import (
 	"errors"
-	"github.com/tidwall/gjson"
-	"google.golang.org/protobuf/proto"
 	"io"
 	"io/ioutil"
+
+	"github.com/tidwall/gjson"
+	"google.golang.org/protobuf/proto"
 )
 
 func ParseCommodityJson(source io.Reader) (<-chan []byte, error) {

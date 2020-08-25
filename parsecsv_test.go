@@ -1,11 +1,12 @@
 package eddbtrans
 
 import (
-	"github.com/stretchr/testify/require"
 	"io"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -109,17 +110,17 @@ func TestParseCsv(t *testing.T) {
 		assert.NotNil(t, channel)
 
 		var result [][]byte = nil
-		go func () {
-			result = <- channel
+		go func() {
+			result = <-channel
 		}()
 
-		assert.Eventually(t, func() bool { return result != nil }, time.Millisecond*50, time.Microsecond*20)
+		assert.Eventually(t, func() bool { return result != nil }, time.Millisecond*100, time.Microsecond*50)
 		if assert.Len(t, result, 2) {
 			assert.Equal(t, []byte("1"), result[0])
 			assert.Equal(t, []byte("number two"), result[1])
 		}
 
-		assert.Eventually(t, func () bool { return isChannelClosed(channel) }, time.Millisecond * 50, time.Millisecond * 20)
+		assert.Eventually(t, func() bool { return isChannelClosed(channel) }, time.Millisecond*100, time.Millisecond*50)
 	})
 
 	t.Run("Lines", func(t *testing.T) {
@@ -129,8 +130,8 @@ func TestParseCsv(t *testing.T) {
 		assert.NotNil(t, channel)
 
 		var result [][]byte = nil
-		go func () {
-			result = <- channel
+		go func() {
+			result = <-channel
 		}()
 
 		assert.Eventually(t, func() bool { return result != nil }, time.Millisecond*50, time.Microsecond*20)
@@ -140,8 +141,8 @@ func TestParseCsv(t *testing.T) {
 		}
 
 		result = nil
-		go func () {
-			result = <- channel
+		go func() {
+			result = <-channel
 		}()
 
 		assert.Eventually(t, func() bool { return result != nil }, time.Millisecond*50, time.Microsecond*20)
@@ -150,6 +151,6 @@ func TestParseCsv(t *testing.T) {
 			assert.Equal(t, []byte("second"), result[1])
 		}
 
-		assert.Eventually(t, func () bool { return isChannelClosed(channel) }, time.Millisecond * 50, time.Millisecond * 20)
+		assert.Eventually(t, func() bool { return isChannelClosed(channel) }, time.Millisecond*50, time.Millisecond*20)
 	})
 }

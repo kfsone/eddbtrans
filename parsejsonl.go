@@ -2,9 +2,10 @@ package eddbtrans
 
 import (
 	"bufio"
-	"github.com/tidwall/gjson"
 	"io"
 	"log"
+
+	"github.com/tidwall/gjson"
 )
 
 type JsonLinesChannel chan []byte
@@ -12,19 +13,19 @@ type JsonResultChannel chan []*gjson.Result
 
 func getJsonLines(source io.Reader) JsonLinesChannel {
 	channel := make(JsonLinesChannel, 8)
-	go func () {
+	go func() {
 		defer close(channel)
 
-		badLines := 0
+		badLines := false
 		scanner := bufio.NewScanner(source)
 
 		for scanner.Scan() {
 			line := scanner.Bytes()
 			if !gjson.ValidBytes(line) {
-				if badLines == 0 {
+				if !badLines {
 					log.Printf("bad json: %s", string(line))
+					badLines = true
 				}
-				badLines += 1
 				continue
 			}
 			channel <- line
@@ -36,17 +37,17 @@ func getJsonLines(source io.Reader) JsonLinesChannel {
 
 func parseJsonLines(lines JsonLinesChannel, fields []string) JsonResultChannel {
 	channel := make(JsonResultChannel, 8)
-	go func () {
+	go func() {
 		defer close(channel)
-		badLines := 0
 
+		badLines := false
 		for line := range lines {
 			result := gjson.ParseBytes(line)
 			if !result.IsObject() {
-				if badLines == 0 {
+				if !badLines {
 					log.Printf("malformed jsonl: %s", string(line))
+					badLines = true
 				}
-				badLines += 1
 				continue
 			}
 			jsonFields := result.Map()
