@@ -8,7 +8,7 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-func getJSONLines(source io.Reader) <- chan []byte {
+func getJSONLines(source io.Reader) <-chan []byte {
 	channel := make(chan []byte, 1)
 	go func() {
 		defer close(channel)
@@ -32,7 +32,7 @@ func getJSONLines(source io.Reader) <- chan []byte {
 	return channel
 }
 
-func parseJSONLines(lines <- chan []byte, fields []string) <- chan []*gjson.Result {
+func parseJSONLines(lines <-chan []byte, fields []string) <-chan []*gjson.Result {
 	channel := make(chan []*gjson.Result, 1)
 	go func() {
 		defer close(channel)
@@ -73,6 +73,6 @@ func parseJSONLines(lines <- chan []byte, fields []string) <- chan []*gjson.Resu
 // send a slice of []byte arrays to the channel representing the columns
 // requested in `fields`.
 //
-func ParseJSONLines(source io.Reader, fields []string) <- chan []*gjson.Result {
+func ParseJSONLines(source io.Reader, fields []string) <-chan []*gjson.Result {
 	return parseJSONLines(getJSONLines(source), fields)
 }

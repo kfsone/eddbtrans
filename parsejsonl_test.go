@@ -2,13 +2,14 @@ package eddbtrans
 
 import (
 	"bytes"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/tidwall/gjson"
 	"log"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func captureLogOutput(callback func()) (logged [][]byte) {
@@ -83,7 +84,7 @@ func Test_getJSONLines(t *testing.T) {
 }
 
 func tryParseJSONLines(input [][]byte, fields []string) (results [][]*gjson.Result, logged [][]byte) {
-	lines := make(chan []byte, len(input) + 1)
+	lines := make(chan []byte, len(input)+1)
 	for i := range input {
 		lines <- input[i]
 	}
@@ -122,7 +123,7 @@ func Test_parseJSONLines(t *testing.T) {
 			[]byte("{\"a\":2}"),
 			[]byte("{\"c\":47,\"a\":320}"),
 		}
-		results, logged := tryParseJSONLines(inputs, []string{"a","c"})
+		results, logged := tryParseJSONLines(inputs, []string{"a", "c"})
 		assert.Len(t, results, 2)
 		if assert.Len(t, logged, 2) {
 			assert.True(t, bytes.HasSuffix(logged[0], []byte("malformed jsonl: [2]")))
@@ -162,7 +163,7 @@ func TestParseJSONLines(t *testing.T) {
 			lines = append(lines, line)
 		}
 	})
-	if 	assert.Len(t, logged, 3) {
+	if assert.Len(t, logged, 3) {
 		assert.True(t, bytes.HasSuffix(logged[0], []byte("bad json: badnews")))
 		assert.True(t, bytes.HasSuffix(logged[1], []byte("malformed jsonl: [1]")))
 		assert.True(t, bytes.HasSuffix(logged[2], []byte("missing \"first\" field in line: {\"badnews\":0}")))
