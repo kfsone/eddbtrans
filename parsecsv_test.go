@@ -63,11 +63,11 @@ func Test_getFieldOrder(t *testing.T) {
 	})
 }
 
-func TestParseCsv(t *testing.T) {
+func TestParseCSV(t *testing.T) {
 	t.Run("Empty stream", func(t *testing.T) {
 		// Passing an empty stream should produce a closed channel with no error.
 		reader := strings.NewReader("")
-		channel, err := ParseCsv(reader, []string{})
+		channel, err := ParseCSV(reader, []string{})
 		if assert.Nil(t, channel) {
 			assert.Equal(t, io.EOF, err)
 		}
@@ -75,21 +75,21 @@ func TestParseCsv(t *testing.T) {
 
 	t.Run("No matching headers", func(t *testing.T) {
 		reader := strings.NewReader("x,y,z")
-		channel, err := ParseCsv(reader, []string{"a"})
+		channel, err := ParseCSV(reader, []string{"a"})
 		assert.Error(t, err)
 		assert.Nil(t, channel)
 	})
 
 	t.Run("Missing headers", func(t *testing.T) {
 		reader := strings.NewReader("a,x,y,z")
-		channel, err := ParseCsv(reader, []string{"a", "b", "z"})
+		channel, err := ParseCSV(reader, []string{"a", "b", "z"})
 		assert.Error(t, err)
 		assert.Nil(t, channel)
 	})
 
 	t.Run("Empty with headers", func(t *testing.T) {
 		reader := strings.NewReader("a,b,c,")
-		channel, err := ParseCsv(reader, []string{"a", "c"})
+		channel, err := ParseCSV(reader, []string{"a", "c"})
 		assert.Nil(t, err)
 		assert.NotNil(t, channel)
 		assert.Eventually(t, func() bool { return isChannelClosed(channel) }, time.Millisecond*10, time.Microsecond*20)
@@ -97,7 +97,7 @@ func TestParseCsv(t *testing.T) {
 
 	t.Run("Noise with headers", func(t *testing.T) {
 		reader := strings.NewReader("a,b,c,\n\n\n\n\n\n\n\n\ninvalid\n\n\n\n\n")
-		channel, err := ParseCsv(reader, []string{"a", "c"})
+		channel, err := ParseCSV(reader, []string{"a", "c"})
 		assert.Nil(t, err)
 		assert.NotNil(t, channel)
 		assert.Eventually(t, func() bool { return isChannelClosed(channel) }, time.Millisecond*10, time.Microsecond*20)
@@ -105,7 +105,7 @@ func TestParseCsv(t *testing.T) {
 
 	t.Run("Nominal use", func(t *testing.T) {
 		reader := strings.NewReader("third,first,fourth,second\n\"this\",1,\"is\",\"number two\"")
-		channel, err := ParseCsv(reader, []string{"first", "second"})
+		channel, err := ParseCSV(reader, []string{"first", "second"})
 		assert.Nil(t, err)
 		assert.NotNil(t, channel)
 
@@ -125,7 +125,7 @@ func TestParseCsv(t *testing.T) {
 
 	t.Run("Lines", func(t *testing.T) {
 		reader := strings.NewReader("3rd,1st,4th,2nd\n\n-,1,-,\"2\",\n\n\ninvalid,invalid\n-,\"first,-,second\"\n\n")
-		channel, err := ParseCsv(reader, []string{"1st", "2nd"})
+		channel, err := ParseCSV(reader, []string{"1st", "2nd"})
 		require.Nil(t, err)
 		assert.NotNil(t, channel)
 

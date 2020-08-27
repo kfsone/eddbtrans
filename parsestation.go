@@ -28,11 +28,11 @@ func getPadSize(padSize string) Station_Features_PadSize {
 }
 
 func ParseStationsJsonl(source io.Reader) (<-chan Message, error) {
-	channel := make(chan Message, 4)
+	channel := make(chan Message, 2)
 
 	go func() {
 		defer close(channel)
-		stations := ParseJsonLines(source, getStationFields())
+		stations := ParseJSONLines(source, getStationFields())
 		for station := range stations {
 			data, err := proto.Marshal(&Station{
 				Id:       station[0].Uint(),

@@ -29,7 +29,7 @@ func getFieldOrder(fields []string, line string) ([]int, int) {
 	return fieldOrder, len(headers)
 }
 
-// ParseCsv will iterate over comma-separated lines in the source file,
+// ParseCSV will iterate over comma-separated lines in the source file,
 // reordering the fields according to `fields`, and then sending the
 // resulting slice of []byte to the returned channel.
 //
@@ -37,7 +37,7 @@ func getFieldOrder(fields []string, line string) ([]int, int) {
 //
 // This is a very naive csv reader, it simply splits on commas.
 //
-func ParseCsv(source io.Reader, fields []string) (<-chan [][]byte, error) {
+func ParseCSV(source io.Reader, fields []string) (<-chan [][]byte, error) {
 	// Scan for a first line, which should contain the headers.
 	scanner := bufio.NewScanner(source)
 	if !scanner.Scan() {
@@ -52,7 +52,7 @@ func ParseCsv(source io.Reader, fields []string) (<-chan [][]byte, error) {
 		return nil, errors.New("missing fields in header")
 	}
 
-	channel := make(chan [][]byte, 16)
+	channel := make(chan [][]byte, 2)
 	go func() {
 		// Break remaining lines up by
 		scanner, fieldOrder, channel := scanner, fieldOrder, channel

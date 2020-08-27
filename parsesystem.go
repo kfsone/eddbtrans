@@ -8,79 +8,6 @@ import (
 
 // Parse the systems_populated.jsonl file
 
-func getSecurityType(jsonId uint64) System_Security_Type {
-	switch jsonId {
-	case 32:
-		return System_Security_Medium
-	case 48:
-		return System_Security_High
-	case 16:
-		return System_Security_Low
-	case 64:
-		return System_Security_Anarchy
-	default:
-		return System_Security_None
-	}
-}
-
-func getPowerState(jsonId uint64) System_Power_State {
-	switch jsonId {
-	case 16:
-		return System_Power_Control
-	case 32:
-		return System_Power_Exploited
-	case 48:
-		return System_Power_Contested
-	case 64:
-		return System_Power_Expansion
-	default:
-		return System_Power_None
-	}
-}
-
-func getGovernmentType(jsonId uint64) Government_Type {
-	switch jsonId {
-	case 144:
-		return Government_Patronage
-
-	case 96:
-		return Government_Democracy
-
-	case 80:
-		return Government_Cooperative
-
-	case 32:
-		return Government_Communism
-
-	case 64:
-		return Government_Corporate
-
-	case 128:
-		return Government_Feudal
-
-	case 112:
-		return Government_Dictatorship
-
-	case 16:
-		return Government_Anarchy
-
-	case 48:
-		return Government_Confederacy
-
-	case 160:
-		return Government_Theocracy
-
-	case 150:
-		return Government_PrisonColony
-
-	case 208:
-		return Government_Prison
-
-	default:
-		return Government_None
-	}
-}
-
 func getAllegianceType(jsonId uint64) Allegiance_Type {
 	switch jsonId {
 	case 1:
@@ -103,11 +30,84 @@ func getAllegianceType(jsonId uint64) Allegiance_Type {
 	}
 }
 
+func getGovernmentType(jsonId uint64) Government_Type {
+	switch jsonId {
+	case 16:
+		return Government_Anarchy
+
+	case 32:
+		return Government_Communism
+
+	case 48:
+		return Government_Confederacy
+
+	case 64:
+		return Government_Corporate
+
+	case 80:
+		return Government_Cooperative
+
+	case 96:
+		return Government_Democracy
+
+	case 112:
+		return Government_Dictatorship
+
+	case 128:
+		return Government_Feudal
+
+	case 144:
+		return Government_Patronage
+
+	case 150:
+		return Government_PrisonColony
+
+	case 160:
+		return Government_Theocracy
+
+	case 208:
+		return Government_Prison
+
+	default:
+		return Government_None
+	}
+}
+
+func getPowerState(jsonId uint64) System_Power_State {
+	switch jsonId {
+	case 16:
+		return System_Power_Control
+	case 32:
+		return System_Power_Exploited
+	case 48:
+		return System_Power_Contested
+	case 64:
+		return System_Power_Expansion
+	default:
+		return System_Power_None
+	}
+}
+
+func getSecurityType(jsonId uint64) System_Security_Type {
+	switch jsonId {
+	case 16:
+		return System_Security_Low
+	case 32:
+		return System_Security_Medium
+	case 48:
+		return System_Security_High
+	case 64:
+		return System_Security_Anarchy
+	default:
+		return System_Security_None
+	}
+}
+
 func ParseSystemsPopulatedJsonl(source io.Reader) (<-chan Message, error) {
-	channel := make(chan Message, 4)
+	channel := make(chan Message, 2)
 	go func() {
 		defer close(channel)
-		systems := ParseJsonLines(source, getSystemFields())
+		systems := ParseJSONLines(source, getSystemFields())
 		for systemJson := range systems {
 			data, err := proto.Marshal(&System{
 				Id:              systemJson[0].Uint(),
