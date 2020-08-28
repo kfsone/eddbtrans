@@ -2,3 +2,7 @@
 .vscode
 .idea
 .venv*
+
+go.sum
+
+*.exe
