@@ -84,6 +84,8 @@ func main() {
 	path := os.Args[1]
 	start := time.Now()
 
+	eddbtrans.SystemRegistry = eddbtrans.OpenDayCare()
+
 	// We'll run all three conversions simultaneously in the background, so we need a way
 	// to wait for them to complete. This is the go "WaitGroup".
 	var wg sync.WaitGroup
@@ -103,5 +105,11 @@ func main() {
 	}()
 
 	wg.Wait()
+	eddbtrans.SystemRegistry.Close()
+
 	fmt.Printf("Finished entire conversion in %s.\n", time.Since(start))
+
+	dc := eddbtrans.SystemRegistry
+	log.Printf("Daycare stats: registered %d, queried %d, approved %d, queued %d, duplicated %d, denied %d\n",
+		dc.Registered, dc.Queried, dc.Approved, dc.Queued, dc.Duplicate, dc.Queried - dc.Approved)
 }

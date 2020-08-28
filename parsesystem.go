@@ -104,10 +104,16 @@ func getSecurityType(jsonId uint64) System_Security_Type {
 	}
 }
 
+var SystemRegistry *Daycare
+
 func ParseSystemsPopulatedJSONL(source io.Reader) (<-chan EntityPacket, error) {
 	channel := make(chan EntityPacket, 2)
 	go func() {
+		if SystemRegistry != nil {
+			defer SystemRegistry.CloseRegistrations()
+		}
 		defer close(channel)
+
 		systems := ParseJSONLines(source, getSystemFields())
 		for systemJson := range systems {
 			data, err := proto.Marshal(&System{
@@ -128,6 +134,9 @@ func ParseSystemsPopulatedJSONL(source io.Reader) (<-chan EntityPacket, error) {
 				panic(err)
 			} else {
 				channel <- EntityPacket{ObjectId: systemJson[0].Uint(), Data: data}
+				if SystemRegistry != nil {
+					SystemRegistry.Register(systemJson[0].Uint())
+				}
 			}
 		}
 	}()

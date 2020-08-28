@@ -29,10 +29,10 @@ func getPadSize(padSize string) Facility_Features_PadSize {
 }
 
 func ParseStationJSONL(source io.Reader) (<-chan EntityPacket, error) {
-	channel := make(chan EntityPacket, 2)
+	registry := make(chan parentCheck, 1)
 
 	go func() {
-		defer close(channel)
+		defer close(registry)
 		stations := ParseJSONLines(source, getStationFields())
 		for station := range stations {
 			data, err := proto.Marshal(&Facility{
@@ -62,10 +62,35 @@ func ParseStationJSONL(source io.Reader) (<-chan EntityPacket, error) {
 			if err != nil {
 				panic(err)
 			} else {
-				channel <- EntityPacket{station[0].Uint(), data}
+				registry <- parentCheck{station[3].Uint(), EntityPacket{station[0].Uint(), data} }
 			}
 		}
 	}()
+
+	channel := make(chan EntityPacket, 1)
+	if SystemRegistry != nil {
+		// Schedule the lookups
+		go func () {
+			defer SystemRegistry.CloseInquiries()
+			for check := range registry {
+				SystemRegistry.Query(check.parentID, check.entity)
+			}
+		}()
+		// Consume the approvals and forward them to channel
+		go func () {
+			defer close(channel)
+			for approved := range SystemRegistry.Approvals() {
+				channel <- approved.(EntityPacket)
+			}
+		}()
+	} else {
+		go func () {
+			defer close(channel)
+			for check := range registry {
+				channel <- check.entity.(EntityPacket)
+			}
+		}()
+	}
 
 	return channel, nil
 }
