@@ -3,6 +3,7 @@ package eddbtrans
 import (
 	"io"
 
+	. "github.com/kfsone/gomenacing/ettudata"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -103,8 +104,8 @@ func getSecurityType(jsonId uint64) System_Security_Type {
 	}
 }
 
-func ParseSystemsPopulatedJsonl(source io.Reader) (<-chan Message, error) {
-	channel := make(chan Message, 2)
+func ParseSystemsPopulatedJSONL(source io.Reader) (<-chan EntityPacket, error) {
+	channel := make(chan EntityPacket, 2)
 	go func() {
 		defer close(channel)
 		systems := ParseJSONLines(source, getSystemFields())
@@ -126,7 +127,7 @@ func ParseSystemsPopulatedJsonl(source io.Reader) (<-chan Message, error) {
 			if err != nil {
 				panic(err)
 			} else {
-				channel <- Message{systemJson[0].Uint(), data}
+				channel <- EntityPacket{ObjectId: systemJson[0].Uint(), Data: data}
 			}
 		}
 	}()

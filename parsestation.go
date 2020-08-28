@@ -4,43 +4,44 @@ import (
 	"io"
 	"strings"
 
+	. "github.com/kfsone/gomenacing/ettudata"
 	"google.golang.org/protobuf/proto"
 )
 
-func getStationType(typeId uint64) Station_Type {
-	if _, ok := Station_Type_name[int32(typeId)]; ok {
-		return Station_Type(typeId)
+func getStationType(typeId uint64) Facility_Type {
+	if _, ok := Facility_Type_name[int32(typeId)]; ok {
+		return Facility_Type(typeId)
 	}
-	return Station_None
+	return Facility_None
 }
 
-func getPadSize(padSize string) Station_Features_PadSize {
+func getPadSize(padSize string) Facility_Features_PadSize {
 	switch strings.ToUpper(padSize) {
 	case "S":
-		return Station_Features_Small
+		return Facility_Features_Small
 	case "M":
-		return Station_Features_Medium
+		return Facility_Features_Medium
 	case "L":
-		return Station_Features_Large
+		return Facility_Features_Large
 	default:
-		return Station_Features_None
+		return Facility_Features_None
 	}
 }
 
-func ParseStationsJsonl(source io.Reader) (<-chan Message, error) {
-	channel := make(chan Message, 2)
+func ParseStationJSONL(source io.Reader) (<-chan EntityPacket, error) {
+	channel := make(chan EntityPacket, 2)
 
 	go func() {
 		defer close(channel)
 		stations := ParseJSONLines(source, getStationFields())
 		for station := range stations {
-			data, err := proto.Marshal(&Station{
+			data, err := proto.Marshal(&Facility{
 				Id:       station[0].Uint(),
 				Name:     station[1].String(),
 				Updated:  station[2].Uint(),
 				SystemId: station[3].Uint(),
 				Type:     getStationType(station[4].Uint()),
-				Features: &Station_Features{
+				Features: &Facility_Features{
 					HasMarket:      station[5].Bool(),
 					HasBlackmarket: station[6].Bool(),
 					HasRefuel:      station[7].Bool(),
@@ -61,7 +62,7 @@ func ParseStationsJsonl(source io.Reader) (<-chan Message, error) {
 			if err != nil {
 				panic(err)
 			} else {
-				channel <- Message{station[0].Uint(), data}
+				channel <- EntityPacket{station[0].Uint(), data}
 			}
 		}
 	}()
