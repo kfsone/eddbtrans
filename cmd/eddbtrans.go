@@ -1,80 +1,22 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/kfsone/eddbtrans"
 )
 
-func parseCommodity(path string) {
-	filename := filepath.Join(path, "commodities.json")
-	file, err := os.Open(filename)
+func ErrIsBad(err error) {
 	if err != nil {
 		panic(err)
 	}
-
-	start := time.Now()
-	results, err := eddbtrans.ParseCommodityJson(file)
-	if err != nil {
-		panic(err)
-	}
-	messageCount := 0
-	for message := range results {
-		messageCount++
-		if messageCount <= 1 {
-			fmt.Printf("Commodity #%d: %d: %d bytes.\n", messageCount, message.ObjectId, len(message.Data))
-		}
-	}
-	fmt.Printf("Converted %d commodities in %s.\n", messageCount, time.Since(start))
 }
 
-func parseSystems(path string) {
-	filename := filepath.Join(path, "systems_populated.jsonl")
-	file, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-
-	start := time.Now()
-	results, err := eddbtrans.ParseSystemsPopulatedJSONL(file)
-	if err != nil {
-		panic(err)
-	}
-	messageCount := 0
-	for message := range results {
-		messageCount++
-		if messageCount <= 1 {
-			fmt.Printf("System #%d: %d: %d bytes.\n", messageCount, message.ObjectId, len(message.Data))
-		}
-	}
-	fmt.Printf("Converted %d systems in %s.\n", messageCount, time.Since(start))
-}
-
-func parseStations(path string) {
-	filename := filepath.Join(path, "stations.jsonl")
-	file, err := os.Open(filename)
-	if err != nil {
-		panic(err)
-	}
-
-	start := time.Now()
-	results, err := eddbtrans.ParseStationJSONL(file)
-	if err != nil {
-		panic(err)
-	}
-	messageCount := 0
-	for message := range results {
-		messageCount++
-		if messageCount <= 1 {
-			fmt.Printf("Station #%d: %d: %d bytes.\n", messageCount, message.ObjectId, len(message.Data))
-		}
-	}
-	fmt.Printf("Converted %d stations in %s.\n", messageCount, time.Since(start))
+func Must(err error) {
+	ErrIsBad(err)
 }
 
 func main() {
@@ -82,34 +24,44 @@ func main() {
 		log.Fatalf("Usage: %s <path>", os.Args[0])
 	}
 	path := os.Args[1]
-	start := time.Now()
 
 	eddbtrans.SystemRegistry = eddbtrans.OpenDayCare()
+	eddbtrans.FacilityRegistry = eddbtrans.OpenDayCare()
 
-	// We'll run all three conversions simultaneously in the background, so we need a way
-	// to wait for them to complete. This is the go "WaitGroup".
+	start := time.Now()
+
 	var wg sync.WaitGroup
-	// Add 3 processes expected.
 	wg.Add(3)
 	go func () {
 		defer wg.Done()
-		parseCommodity(path)
+		convertSystems(path)
 	}()
 	go func () {
 		defer wg.Done()
-		parseSystems(path)
+		convertStations(path)
 	}()
 	go func () {
 		defer wg.Done()
-		parseStations(path)
+		// Since the commodity list is tiny, lets just convert it first.
+		convertCommodities(path)
+		// This way we don't need a Daycare for commodity IDs.
+		convertListings(path)
 	}()
 
 	wg.Wait()
-	eddbtrans.SystemRegistry.Close()
 
-	fmt.Printf("Finished entire conversion in %s.\n", time.Since(start))
+	log.Printf("Finished entire conversion in %s.\n", time.Since(start))
 
 	dc := eddbtrans.SystemRegistry
 	log.Printf("Daycare stats: registered %d, queried %d, approved %d, queued %d, duplicated %d, denied %d\n",
-		dc.Registered, dc.Queried, dc.Approved, dc.Queued, dc.Duplicate, dc.Queried - dc.Approved)
+		dc.Registered, dc.Queried, dc.Approved, dc.Queued, dc.Duplicate, dc.Queried-dc.Approved)
+	if len(dc.Registry()) > 0 {
+		stations := 0
+		for _, items := range dc.Registry() {
+			stations += len(items)
+		}
+		log.Printf("%d unrecognized systems referenced by %d stations.", len(dc.Registry()), stations)
+	}
+
+	eddbtrans.SystemRegistry.Close()
 }

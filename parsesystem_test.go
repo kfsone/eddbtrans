@@ -1,6 +1,7 @@
 package eddbtrans
 
 import (
+	. "github.com/kfsone/gomenacing/ettudata"
 	"testing"
 )
 

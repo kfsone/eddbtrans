@@ -28,11 +28,18 @@ func getPadSize(padSize string) Facility_Features_PadSize {
 	}
 }
 
+// FacilityRegistry will provide facility-id checking for listings.
+var FacilityRegistry *Daycare
+
 func ParseStationJSONL(source io.Reader) (<-chan EntityPacket, error) {
 	registry := make(chan parentCheck, 1)
 
 	go func() {
 		defer close(registry)
+		if FacilityRegistry != nil {
+			defer FacilityRegistry.CloseRegistration()
+		}
+
 		stations := ParseJSONLines(source, getStationFields())
 		for station := range stations {
 			data, err := proto.Marshal(&Facility{
@@ -62,7 +69,8 @@ func ParseStationJSONL(source io.Reader) (<-chan EntityPacket, error) {
 			if err != nil {
 				panic(err)
 			} else {
-				registry <- parentCheck{station[3].Uint(), EntityPacket{station[0].Uint(), data} }
+				registry <- parentCheck{parentID: station[3].Uint(), entity: EntityPacket{ObjectId: station[0].Uint(), Data: data} }
+				FacilityRegistry.Register(station[0].Uint())
 			}
 		}
 	}()
@@ -71,9 +79,9 @@ func ParseStationJSONL(source io.Reader) (<-chan EntityPacket, error) {
 	if SystemRegistry != nil {
 		// Schedule the lookups
 		go func () {
-			defer SystemRegistry.CloseInquiries()
+			defer SystemRegistry.CloseLookups()
 			for check := range registry {
-				SystemRegistry.Query(check.parentID, check.entity)
+				SystemRegistry.Lookup(check.parentID, check.entity)
 			}
 		}()
 		// Consume the approvals and forward them to channel

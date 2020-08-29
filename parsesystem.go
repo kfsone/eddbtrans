@@ -104,15 +104,16 @@ func getSecurityType(jsonId uint64) System_Security_Type {
 	}
 }
 
+// SystemRegistry will provide system-id checking for facilities.
 var SystemRegistry *Daycare
 
 func ParseSystemsPopulatedJSONL(source io.Reader) (<-chan EntityPacket, error) {
-	channel := make(chan EntityPacket, 2)
+	channel := make(chan EntityPacket, 1)
 	go func() {
-		if SystemRegistry != nil {
-			defer SystemRegistry.CloseRegistrations()
-		}
 		defer close(channel)
+		if SystemRegistry != nil {
+			defer SystemRegistry.CloseRegistration()
+		}
 
 		systems := ParseJSONLines(source, getSystemFields())
 		for systemJson := range systems {

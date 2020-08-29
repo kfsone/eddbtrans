@@ -1,12 +1,8 @@
 package eddbtrans
 
 import (
-	"errors"
 	"sync"
 )
-
-// Declare an error specifically for denoting the registry is closed.
-var ErrDaycareClosed = errors.New("registry is already closed")
 
 // Utility for allowing out-of-order registration and lookup of parent<->child relations,
 // for example querying whether the system id of a station is valid, without knowing
@@ -19,77 +15,93 @@ type parentCheck struct {
 
 // Daycare is a place for parents to register and children to look them up.
 type Daycare struct {
-	registrations chan uint64
-	inquiries     chan parentCheck
-	approvals     chan interface{}
-	working       sync.WaitGroup
+	requests  chan interface{}
+	approvals chan interface{}
+	openWG    sync.WaitGroup
+	registry  map[uint64][]interface{}
 
 	// statistics
-	Registered uint64
-	Queried    uint64
-	Approved   uint64
-	Queued     uint64
-	Duplicate  uint64
+	Registered  uint64
+	Queried     uint64
+	Approved    uint64
+	Queued      uint64
+	Dequeued    uint64
+	Duplicate   uint64
 }
 
 // Close releases memory used by the Daycare once the registrations and inquiries
 // channels have been closed.
 func (dc *Daycare) Close() (err error) {
-	if dc.Closed() {
-		err = ErrDaycareClosed
-	} else {
-		// Wait for the worker to shutdown.
-		dc.working.Wait()
-		// Clear out the values so we can detect repeat calls.
-		dc.registrations, dc.inquiries, dc.approvals = nil, nil, nil
-	}
-	return
+	dc.registry = nil
+	return nil
 }
 
-// Closed returns true if the Daycare is not currently open.
-func (dc Daycare) Closed() bool {
-	return dc.registrations == nil
+func (dc *Daycare) Registry() map[uint64][]interface{} {
+	return dc.registry
 }
 
 // Approvals returns a channel from which approvals may be consumed.
-func (dc Daycare) Approvals() <-chan interface{} {
+func (dc *Daycare) Approvals() <-chan interface{} {
 	return dc.approvals
 }
 
 // CloseInquiries closes down the inquiry channel.
-func (dc *Daycare) CloseInquiries() {
-	if !dc.Closed() {
-		close(dc.inquiries)
-	}
+func (dc *Daycare) CloseRegistration() {
+	dc.openWG.Done()
 }
 
-// CloseRegistrations closes down the registration channel.
-func (dc *Daycare) CloseRegistrations() {
-	if !dc.Closed() {
-		close(dc.registrations)
-	}
+func (dc *Daycare) CloseLookups() {
+	dc.openWG.Done()
 }
 
-// Query forwards an entity to be matched against its parent by the Daycare center.
-func (dc *Daycare) Query(parentID uint64, entity interface{}) (err error) {
-	if dc.Closed() {
-		err = ErrDaycareClosed
-	} else {
-		dc.inquiries <- parentCheck{parentID: parentID, entity: entity}
-		dc.Queried++
-	}
-	return
+// Lookup forwards an entity to be matched against its parent by the Daycare center.
+func (dc *Daycare) Lookup(parentID uint64, entity interface{}) {
+	dc.requests <- parentCheck{parentID: parentID, entity: entity}
 }
 
 // Register adds an entity to the registry, approving any pending and future queries.
-func (dc *Daycare) Register(entityID uint64) (err error) {
-	if dc.Closed() {
-		err = ErrDaycareClosed
+func (dc *Daycare) Register(entityID uint64) {
+	dc.requests <- entityID
+	dc.Registered++
+}
+
+func (dc *Daycare) register(id uint64) {
+	// Register an id if it's not already registered.
+	if waiting, existed := dc.registry[id]; existed == true {
+		// Had children tried to look up this parent?
+		if waiting != nil {
+			for _, child := range waiting {
+				dc.approvals <- child
+				dc.Dequeued++
+				dc.Approved++
+			}
+		} else {
+			dc.Duplicate++
+		}
+		// Clear the list
 	} else {
-		dc.registrations <- entityID
 		dc.Registered++
 	}
-	return
+
+	// Prevent future children from registering
+	dc.registry[id] = nil
+}
+
+func (dc *Daycare) lookup(check parentCheck) {
+	// See if the parent exists, or register us as waiting for it
+	// For the parent to be registered, it should exist but point to nil.
+	if waiting, existed := dc.registry[check.parentID]; existed == false {
+		dc.registry[check.parentID] = append(make([]interface{}, 0, 8), check.entity)
+		dc.Queued++
+	} else if waiting != nil {
+		dc.registry[check.parentID] = append(waiting, check.entity)
+		dc.Queued++
+	} else {
+		// registered, approve
+		dc.approvals <- check.entity
+		dc.Approved++
+	}
+	dc.Queried++
 }
 
 // OpenDayCare launches a worker which will monitor incoming registrations and inquiries,
@@ -99,75 +111,38 @@ func (dc *Daycare) Register(entityID uint64) (err error) {
 func OpenDayCare() (dc *Daycare) {
 	// Create the instance with channels.
 	dc = &Daycare{
-		registrations: make(chan uint64, 8),
-		inquiries:     make(chan parentCheck, 1),
-		approvals:     make(chan interface{}, 64),
+		requests:    make(chan interface{}, 1),
+		approvals:   make(chan interface{}, 1),
+		registry:    make(map[uint64][]interface{}),
 	}
 
 	// Start the background worker.
-	dc.working.Add(1)
+	dc.openWG.Add(2) // to channels to wait on
 	go func() {
-		defer dc.working.Done()
+		defer close(dc.requests)
+		dc.openWG.Wait()
+	}()
+
+	go func() {
 		defer close(dc.approvals)
 
-		registry := make(map[uint64][]interface{})
+		for received := range dc.requests {
+			switch received.(type) {
+			case uint64: // receiving a registration
+				dc.register(received.(uint64))
 
-		channelsOpen := 2
-
-		for channelsOpen > 0 {
-			select {
-
-			// Receive an incoming registration.
-			case id, ok := <-dc.registrations:
-				if ok == false {
-					// Channel closed
-					channelsOpen--
-					continue
-				}
-				// Register an id if it's not already registered.
-				waiting, existed := registry[id]
-				if existed {
-					// Had children tried to look up this parent?
-					if waiting != nil {
-						for _, child := range waiting {
-							dc.approvals <- child
-						}
-						dc.Approved += uint64(len(waiting))
-					} else {
-						dc.Duplicate++
-					}
-					// Clear the list
-				}
-				// This will prevent future children from registering
-				registry[id] = nil
-
-				break
-
-				// Receive an inquiry (has this ID been registered).
-			case check, ok := <-dc.inquiries:
-				if ok == false {
-					channelsOpen--
-					continue
-				}
-				// See if the parent exists, or register us as waiting for it
-				// For the parent to be registered, it should exist but point to nil.
-				if waiting, existed := registry[check.parentID]; existed == false {
-					registry[check.parentID] = make([]interface{}, 0, 16)
-					registry[check.parentID] = append(registry[check.parentID], check.entity)
-					dc.Queued++
-				} else if waiting != nil {
-					// there's a queue
-					registry[check.parentID] = append(registry[check.parentID], check.entity)
-					dc.Queued++
-				} else {
-					// registered, approve
-					dc.approvals <- check.entity
-					dc.Approved++
-				}
-
-				break
+			case parentCheck:
+				dc.lookup(received.(parentCheck))
 			}
 		}
+
+		orphans := make(map[uint64][]interface{}, 64)
+		for id, list := range dc.registry {
+			if list != nil && len(list) > 0 {
+				orphans[id] = list
+			}
+		}
+		dc.registry = orphans
 	}()
 
 	return

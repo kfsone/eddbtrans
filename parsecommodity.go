@@ -19,7 +19,7 @@ func ParseCommodityJson(source io.Reader) (<-chan EntityPacket, error) {
 		return nil, errors.New("malformed commodity-list json")
 	}
 
-	commodities := make(chan EntityPacket, 2)
+	commodities := make(chan EntityPacket, 1)
 	go func() {
 		defer close(commodities)
 		results := gjson.ParseBytes(json)

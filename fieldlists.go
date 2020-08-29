@@ -40,3 +40,12 @@ func getStationFields() []string {
 		"ed_market_id",
 	}
 }
+
+func getListingFields() []string {
+	return []string{
+		"station_id", "commodity_id",
+		"supply_bracket", "supply", "sell_price",
+		"demand_bracket", "demand", "buy_price",
+		"collected_at",
+	}
+}
