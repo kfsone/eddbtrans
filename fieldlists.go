@@ -1,5 +1,5 @@
 // Specifies which EDDB fields we want to lift from each source,
-// and the order we want them to be in when ettudata returns them.
+// and the order we want them to be in when parsing returns them.
 //
 //+build !test
 

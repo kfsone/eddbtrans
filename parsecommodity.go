@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/ioutil"
 
-	. "github.com/kfsone/gomenacing/ettudata"
 	"github.com/tidwall/gjson"
 	"google.golang.org/protobuf/proto"
 )

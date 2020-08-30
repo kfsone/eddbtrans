@@ -1,7 +1,7 @@
 Elite Dangerous Market Data Translation
 =======================================
 
-This is a proof-of-concept implementation of a Go-Menacing 'ettudata' translator which takes
+This is a proof-of-concept implementation of a Go-Menacing gomschema translator which takes
 input from EDDB files and converts them into the Go-Meancing protobuffer format.
 
 All data is ingested in parallel. A facility called "Daycare" is used to cope with things being

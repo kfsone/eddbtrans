@@ -1,7 +1,7 @@
 package eddbtrans
 
 import (
-	. "github.com/kfsone/gomenacing/ettudata"
+	. "github.com/kfsone/gomenacing/pkg/gomschema"
 	"google.golang.org/protobuf/proto"
 	"io"
 	"log"

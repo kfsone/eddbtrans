@@ -4,7 +4,6 @@ import (
 	"io"
 	"strings"
 
-	. "github.com/kfsone/gomenacing/ettudata"
 	"google.golang.org/protobuf/proto"
 )
 

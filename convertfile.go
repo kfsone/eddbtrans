@@ -1,12 +1,13 @@
 package eddbtrans
 
 import (
-	"github.com/kfsone/gomenacing/ettudata"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/kfsone/gomenacing/pkg/parsing"
 )
 
 // ErrIsBad will panic if error is not nil.
@@ -17,9 +18,9 @@ func ErrIsBad(err error) {
 }
 
 // parser is an alias for functions taking a reader and returning a stream of entity packets.
-type parser func(io.Reader) (<- chan ettudata.EntityPacket, error)
+type parser func(io.Reader) (<- chan parsing.EntityPacket, error)
 
-func ConvertFile(path, srcName, dstName string, parserImpl parser, callback func(ettudata.EntityPacket)) {
+func ConvertFile(path, srcName, dstName string, parserImpl parser, callback func(parsing.EntityPacket)) {
 	srcPath, dstPath := filepath.Join(path, srcName), filepath.Join(path, dstName)
 
 	// Open the input file

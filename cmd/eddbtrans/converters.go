@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/kfsone/eddbtrans"
-	"github.com/kfsone/gomenacing/ettudata"
+	"github.com/kfsone/gomenacing/pkg/parsing"
 )
 
 func convertCommodities(path string) {

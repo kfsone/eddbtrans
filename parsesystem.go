@@ -3,7 +3,6 @@ package eddbtrans
 import (
 	"io"
 
-	. "github.com/kfsone/gomenacing/ettudata"
 	"google.golang.org/protobuf/proto"
 )
 
