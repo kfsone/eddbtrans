@@ -12,7 +12,6 @@ func getSystemFields() []string {
 		"is_populated", "needs_permit",
 		"government_id", "allegiance_id",
 		"security_id",
-		"ed_system_address",
 	}
 }
 
@@ -33,7 +32,6 @@ func getStationFields() []string {
 		"max_landing_pad_size",
 		"distance_to_star",
 		"government_id", "allegiance_id",
-		"ed_market_id",
 	}
 }
 

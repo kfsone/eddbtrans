@@ -115,7 +115,6 @@ func ParseSystemsPopulatedJSONL(source io.Reader) (<-chan parsing.EntityPacket, 
 				SecurityLevel: getSecurityType(systemJson[8].Uint()),
 				Government:    getGovernmentType(systemJson[9].Uint()),
 				Allegiance:    getAllegianceType(systemJson[10].Uint()),
-				EdAddress:     systemJson[11].Uint(),
 			})
 			if err != nil {
 				panic(err)

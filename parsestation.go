@@ -67,7 +67,6 @@ func ParseStationJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
 				LsFromStar: uint32(station[16].Float()),
 				Government: getGovernmentType(station[17].Uint()),
 				Allegiance: getAllegianceType(station[18].Uint()),
-				EdMarketId: station[19].Uint(),
 			})
 			if err != nil {
 				panic(err)
