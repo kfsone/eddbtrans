@@ -3,15 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	gom "github.com/kfsone/gomenacing/pkg/gomschema"
 	"log"
 	"os"
 	"time"
+
+	gom "github.com/kfsone/gomenacing/pkg/gomschema"
 )
 
 var filename = flag.String("file", "", "Path/file of the .gom file to load.")
 
-func main () {
+func main() {
 	flag.Parse()
 	if *filename == "" {
 		panic("No -file specified.")

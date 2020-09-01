@@ -1,9 +1,10 @@
 package eddbtrans
 
 import (
+	"io"
+
 	gom "github.com/kfsone/gomenacing/pkg/gomschema"
 	"github.com/kfsone/gomenacing/pkg/parsing"
-	"io"
 
 	"google.golang.org/protobuf/proto"
 )

@@ -2,13 +2,14 @@ package eddbtrans
 
 import (
 	"fmt"
-	gom "github.com/kfsone/gomenacing/pkg/gomschema"
-	"google.golang.org/protobuf/proto"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"time"
+
+	gom "github.com/kfsone/gomenacing/pkg/gomschema"
+	"google.golang.org/protobuf/proto"
 
 	"github.com/kfsone/gomenacing/pkg/parsing"
 )

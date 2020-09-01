@@ -1,12 +1,13 @@
 package eddbtrans
 
 import (
-	gom "github.com/kfsone/gomenacing/pkg/gomschema"
-	"github.com/kfsone/gomenacing/pkg/parsing"
-	"google.golang.org/protobuf/proto"
 	"io"
 	"log"
 	"strconv"
+
+	gom "github.com/kfsone/gomenacing/pkg/gomschema"
+	"github.com/kfsone/gomenacing/pkg/parsing"
+	"google.golang.org/protobuf/proto"
 )
 
 func convertValues(from [][]byte, into []uint64) (err error) {

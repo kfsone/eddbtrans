@@ -6,12 +6,12 @@ import (
 	"io/ioutil"
 
 	gom "github.com/kfsone/gomenacing/pkg/gomschema"
-	. "github.com/kfsone/gomenacing/pkg/parsing"
+	"github.com/kfsone/gomenacing/pkg/parsing"
 	"github.com/tidwall/gjson"
 	"google.golang.org/protobuf/proto"
 )
 
-func ParseCommodityJson(source io.Reader) (<-chan EntityPacket, error) {
+func ParseCommodityJson(source io.Reader) (<-chan parsing.EntityPacket, error) {
 	json, err := ioutil.ReadAll(source)
 	if err != nil {
 		return nil, err
@@ -20,7 +20,7 @@ func ParseCommodityJson(source io.Reader) (<-chan EntityPacket, error) {
 		return nil, errors.New("malformed commodity-list json")
 	}
 
-	commodities := make(chan EntityPacket, 1)
+	commodities := make(chan parsing.EntityPacket, 1)
 	go func() {
 		defer close(commodities)
 		results := gjson.ParseBytes(json)
@@ -41,7 +41,7 @@ func ParseCommodityJson(source io.Reader) (<-chan EntityPacket, error) {
 			if err != nil {
 				panic(err)
 			}
-			commodities <- EntityPacket{ObjectId: id, Data: data}
+			commodities <- parsing.EntityPacket{ObjectId: id, Data: data}
 			return true
 		})
 	}()
