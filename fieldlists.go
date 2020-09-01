@@ -11,17 +11,15 @@ func getSystemFields() []string {
 		"x", "y", "z",
 		"is_populated", "needs_permit",
 		"government_id", "allegiance_id",
-		"security_id", "power_state_id",
-		"edsm_id", "ed_system_address",
+		"security_id",
+		"ed_system_address",
 	}
 }
 
 func getStationFields() []string {
 	return []string{
 		"id", "name", "updated_at", "system_id",
-
 		"type_id",
-
 		"has_blackmarket",
 		"has_market",
 		"has_refuel",
@@ -33,10 +31,8 @@ func getStationFields() []string {
 		"has_commodities",
 		"is_planetary",
 		"max_landing_pad_size",
-
 		"distance_to_star",
 		"government_id", "allegiance_id",
-
 		"ed_market_id",
 	}
 }
@@ -44,8 +40,8 @@ func getStationFields() []string {
 func getListingFields() []string {
 	return []string{
 		"station_id", "commodity_id",
-		"supply_bracket", "supply", "sell_price",
-		"demand_bracket", "demand", "buy_price",
+		"supply", "sell_price",
+		"demand", "buy_price",
 		"collected_at",
 	}
 }

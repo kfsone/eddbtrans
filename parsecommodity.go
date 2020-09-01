@@ -5,6 +5,8 @@ import (
 	"io"
 	"io/ioutil"
 
+	gom "github.com/kfsone/gomenacing/pkg/gomschema"
+	. "github.com/kfsone/gomenacing/pkg/parsing"
 	"github.com/tidwall/gjson"
 	"google.golang.org/protobuf/proto"
 )
@@ -27,19 +29,19 @@ func ParseCommodityJson(source io.Reader) (<-chan EntityPacket, error) {
 				return true
 			}
 			values := value.Map()
-			data, err := proto.Marshal(&Commodity{
-				Id:              values["id"].Uint(),
+			id := uint32(values["id"].Uint())
+			data, err := proto.Marshal(&gom.Commodity{
+				Id:              id,
 				Name:            values["name"].String(),
-				Category:        Commodity_Category(values["category_id"].Uint()),
+				CategoryId:      gom.Commodity_Category(values["category_id"].Uint()),
 				IsRare:          values["is_rare"].Bool(),
 				IsNonMarketable: values["is_non_marketable"].Bool(),
-				AveragePrice:    uint64(values["average_price"].Uint()),
-				EdId:            values["ed_id"].Uint(),
+				AverageCr:       uint32(values["average_price"].Uint()),
 			})
 			if err != nil {
 				panic(err)
 			}
-			commodities <- EntityPacket{ObjectId: values["id"].Uint(), Data: data}
+			commodities <- EntityPacket{ObjectId: id, Data: data}
 			return true
 		})
 	}()

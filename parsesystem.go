@@ -1,6 +1,8 @@
 package eddbtrans
 
 import (
+	gom "github.com/kfsone/gomenacing/pkg/gomschema"
+	"github.com/kfsone/gomenacing/pkg/parsing"
 	"io"
 
 	"google.golang.org/protobuf/proto"
@@ -8,134 +10,118 @@ import (
 
 // Parse the systems_populated.jsonl file
 
-func getAllegianceType(jsonId uint64) Allegiance_Type {
+func getAllegianceType(jsonId uint64) gom.AllegianceType {
 	switch jsonId {
 	case 1:
-		return Allegiance_Alliance
+		return gom.AllegianceType_AllegAlliance
 
 	case 2:
-		return Allegiance_Empire
+		return gom.AllegianceType_AllegEmpire
 
 	case 3:
-		return Allegiance_Federation
+		return gom.AllegianceType_AllegFederation
 
 	case 4:
-		return Allegiance_Independent
+		return gom.AllegianceType_AllegIndependent
 
 	case 7:
-		return Allegiance_PilotsFederation
+		return gom.AllegianceType_AllegPilotsFederation
 
 	default:
-		return Allegiance_None
+		return gom.AllegianceType_AllegNone
 	}
 }
 
-func getGovernmentType(jsonId uint64) Government_Type {
+func getGovernmentType(jsonId uint64) gom.GovernmentType {
 	switch jsonId {
 	case 16:
-		return Government_Anarchy
+		return gom.GovernmentType_GovAnarchy
 
 	case 32:
-		return Government_Communism
+		return gom.GovernmentType_GovCommunism
 
 	case 48:
-		return Government_Confederacy
+		return gom.GovernmentType_GovConfederacy
 
 	case 64:
-		return Government_Corporate
+		return gom.GovernmentType_GovCorporate
 
 	case 80:
-		return Government_Cooperative
+		return gom.GovernmentType_GovCooperative
 
 	case 96:
-		return Government_Democracy
+		return gom.GovernmentType_GovDemocracy
 
 	case 112:
-		return Government_Dictatorship
+		return gom.GovernmentType_GovDictatorship
 
 	case 128:
-		return Government_Feudal
+		return gom.GovernmentType_GovFeudal
 
 	case 144:
-		return Government_Patronage
+		return gom.GovernmentType_GovPatronage
 
 	case 150:
-		return Government_PrisonColony
+		return gom.GovernmentType_GovPrisonColony
 
 	case 160:
-		return Government_Theocracy
+		return gom.GovernmentType_GovTheocracy
 
 	case 208:
-		return Government_Prison
+		return gom.GovernmentType_GovPrison
 
 	default:
-		return Government_None
+		return gom.GovernmentType_GovNone
 	}
 }
 
-func getPowerState(jsonId uint64) System_Power_State {
+func getSecurityType(jsonId uint64) gom.SecurityLevel {
 	switch jsonId {
 	case 16:
-		return System_Power_Control
+		return gom.SecurityLevel_SecurityLow
 	case 32:
-		return System_Power_Exploited
+		return gom.SecurityLevel_SecurityMedium
 	case 48:
-		return System_Power_Contested
+		return gom.SecurityLevel_SecurityHigh
 	case 64:
-		return System_Power_Expansion
+		return gom.SecurityLevel_SecurityAnarchy
 	default:
-		return System_Power_None
-	}
-}
-
-func getSecurityType(jsonId uint64) System_Security_Type {
-	switch jsonId {
-	case 16:
-		return System_Security_Low
-	case 32:
-		return System_Security_Medium
-	case 48:
-		return System_Security_High
-	case 64:
-		return System_Security_Anarchy
-	default:
-		return System_Security_None
+		return gom.SecurityLevel_SecurityNone
 	}
 }
 
 // SystemRegistry will provide system-id checking for facilities.
 var SystemRegistry *Daycare
 
-func ParseSystemsPopulatedJSONL(source io.Reader) (<-chan EntityPacket, error) {
-	channel := make(chan EntityPacket, 1)
+func ParseSystemsPopulatedJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
+	channel := make(chan parsing.EntityPacket, 1)
 	go func() {
 		defer close(channel)
 		if SystemRegistry != nil {
 			defer SystemRegistry.CloseRegistration()
 		}
 
-		systems := ParseJSONLines(source, getSystemFields())
+		systems := parsing.ParseJSONLines(source, getSystemFields())
 		for systemJson := range systems {
-			data, err := proto.Marshal(&System{
-				Id:              systemJson[0].Uint(),
-				Name:            systemJson[1].String(),
-				Updated:         systemJson[2].Uint(),
-				Position:        &System_Coordinates{X: systemJson[3].Float(), Y: systemJson[4].Float(), Z: systemJson[5].Float()},
-				IsPopulated:     systemJson[6].Bool(),
-				NeedsPermit:     systemJson[7].Bool(),
-				Security:        &System_Security{Type: getSecurityType(systemJson[8].Uint())},
-				Power:           &System_Power{State: getPowerState(systemJson[9].Uint())},
-				Government:      &Government{Type: getGovernmentType(systemJson[10].Uint())},
-				Allegiance:      &Allegiance{Type: getAllegianceType(systemJson[11].Uint())},
-				EdsmId:          systemJson[12].Uint(),
-				EdSystemAddress: systemJson[13].Uint(),
+			systemId := uint32(systemJson[0].Uint())
+			data, err := proto.Marshal(&gom.System{
+				Id:            systemId,
+				Name:          systemJson[1].String(),
+				TimestampUtc:  systemJson[2].Uint(),
+				Position:      &gom.Coordinate{X: systemJson[3].Float(), Y: systemJson[4].Float(), Z: systemJson[5].Float()},
+				Populated:     systemJson[6].Bool(),
+				NeedsPermit:   systemJson[7].Bool(),
+				SecurityLevel: getSecurityType(systemJson[8].Uint()),
+				Government:    getGovernmentType(systemJson[9].Uint()),
+				Allegiance:    getAllegianceType(systemJson[10].Uint()),
+				EdAddress:     systemJson[11].Uint(),
 			})
 			if err != nil {
 				panic(err)
 			} else {
-				channel <- EntityPacket{ObjectId: systemJson[0].Uint(), Data: data}
+				channel <- parsing.EntityPacket{ObjectId: systemId, Data: data}
 				if SystemRegistry != nil {
-					SystemRegistry.Register(systemJson[0].Uint())
+					SystemRegistry.Register(systemId)
 				}
 			}
 		}

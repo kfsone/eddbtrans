@@ -32,15 +32,15 @@ func main() {
 
 	var wg sync.WaitGroup
 	wg.Add(3)
-	go func () {
+	go func() {
 		defer wg.Done()
 		convertSystems(path)
 	}()
-	go func () {
+	go func() {
 		defer wg.Done()
 		convertStations(path)
 	}()
-	go func () {
+	go func() {
 		defer wg.Done()
 		// Since the commodity list is tiny, lets just convert it first.
 		convertCommodities(path)

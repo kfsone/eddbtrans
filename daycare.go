@@ -9,7 +9,7 @@ import (
 // whether the system will have been loaded yet.
 
 type parentCheck struct {
-	parentID uint64
+	parentID uint32
 	entity   interface{}
 }
 
@@ -18,15 +18,15 @@ type Daycare struct {
 	requests  chan interface{}
 	approvals chan interface{}
 	openWG    sync.WaitGroup
-	registry  map[uint64][]interface{}
+	registry  map[uint32][]interface{}
 
 	// statistics
-	Registered  uint64
-	Queried     uint64
-	Approved    uint64
-	Queued      uint64
-	Dequeued    uint64
-	Duplicate   uint64
+	Registered uint64
+	Queried    uint64
+	Approved   uint64
+	Queued     uint64
+	Dequeued   uint64
+	Duplicate  uint64
 }
 
 // Close releases memory used by the Daycare once the registrations and inquiries
@@ -36,7 +36,7 @@ func (dc *Daycare) Close() (err error) {
 	return nil
 }
 
-func (dc *Daycare) Registry() map[uint64][]interface{} {
+func (dc *Daycare) Registry() map[uint32][]interface{} {
 	return dc.registry
 }
 
@@ -55,17 +55,17 @@ func (dc *Daycare) CloseLookups() {
 }
 
 // Lookup forwards an entity to be matched against its parent by the Daycare center.
-func (dc *Daycare) Lookup(parentID uint64, entity interface{}) {
+func (dc *Daycare) Lookup(parentID uint32, entity interface{}) {
 	dc.requests <- parentCheck{parentID: parentID, entity: entity}
 }
 
 // Register adds an entity to the registry, approving any pending and future queries.
-func (dc *Daycare) Register(entityID uint64) {
+func (dc *Daycare) Register(entityID uint32) {
 	dc.requests <- entityID
 	dc.Registered++
 }
 
-func (dc *Daycare) register(id uint64) {
+func (dc *Daycare) register(id uint32) {
 	// Register an id if it's not already registered.
 	if waiting, existed := dc.registry[id]; existed == true {
 		// Had children tried to look up this parent?
@@ -111,9 +111,9 @@ func (dc *Daycare) lookup(check parentCheck) {
 func OpenDayCare() (dc *Daycare) {
 	// Create the instance with channels.
 	dc = &Daycare{
-		requests:    make(chan interface{}, 1),
-		approvals:   make(chan interface{}, 1),
-		registry:    make(map[uint64][]interface{}),
+		requests:  make(chan interface{}, 1),
+		approvals: make(chan interface{}, 1),
+		registry:  make(map[uint32][]interface{}),
 	}
 
 	// Start the background worker.
@@ -128,15 +128,15 @@ func OpenDayCare() (dc *Daycare) {
 
 		for received := range dc.requests {
 			switch received.(type) {
-			case uint64: // receiving a registration
-				dc.register(received.(uint64))
+			case uint32: // receiving a registration
+				dc.register(received.(uint32))
 
 			case parentCheck:
 				dc.lookup(received.(parentCheck))
 			}
 		}
 
-		orphans := make(map[uint64][]interface{}, 64)
+		orphans := make(map[uint32][]interface{}, 64)
 		for id, list := range dc.registry {
 			if list != nil && len(list) > 0 {
 				orphans[id] = list
