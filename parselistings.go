@@ -10,6 +10,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+type FacilityListings map[uint32]*gom.FacilityListing
+
 func convertValues(from [][]byte, into []uint64) (err error) {
 	for idx, value := range from {
 		into[idx], err = strconv.ParseUint(string(value), 10, 64)
@@ -20,54 +22,74 @@ func convertValues(from [][]byte, into []uint64) (err error) {
 	return nil
 }
 
+func registerListing(stationID uint32, listing *gom.CommodityListing, facilityListings FacilityListings) {
+	listings, exists := facilityListings[stationID]
+	if exists == false {
+		listings = &gom.FacilityListing{
+			Id:       stationID,
+			Listings: make([]*gom.CommodityListing, 0, 32),
+		}
+		facilityListings[stationID] = listings
+	}
+
+	listings.Listings = append(listings.Listings, listing)
+}
+
+func registerCommodityListing(row []uint64, facilityListings FacilityListings) bool {
+	// Check station ID for 0 and truncation
+	stationID := uint32(row[0])
+	if stationID == 0 || uint64(stationID) != row[0] {
+		return false
+	}
+
+	id := uint32(row[1])
+	if CommodityExists(id) == false {
+		return false
+	}
+
+	listing := &gom.CommodityListing{
+		CommodityId:   id,
+		SupplyUnits:   uint32(row[2]),
+		SupplyCredits: uint32(row[3]),
+		DemandUnits:   uint32(row[4]),
+		DemandCredits: uint32(row[5]),
+		TimestampUtc:  row[6],
+	}
+
+	registerListing(stationID, listing, facilityListings)
+
+	return true
+}
+
 func ParseListingsCSV(source io.Reader) (<-chan parsing.EntityPacket, error) {
 	// We'll marshal all the listings for a station together and writ t
-	facilityListings := make(map[uint32]*gom.FacilityListing)
+	listings := make(FacilityListings, 80000)
 
 	// channel we'll use to ask daycare if stations are registered
 	marshalling := make(chan parentCheck)
 	go func() {
 		defer close(marshalling)
-		listingCount, badValuesCount, badCommodityCount := 0, 0, 0
 
-		listings, err := parsing.ParseCSV(source, getListingFields())
+		count := 0
+		rows, err := parsing.ParseCSV(source, getListingFields())
 		row := make([]uint64, len(getListingFields()))
 		ErrIsBad(err)
-		for listing := range listings {
-			listingCount++
-			err = convertValues(listing, row)
+		for columns := range rows {
+			err = convertValues(columns, row)
 			if err != nil {
-				badValuesCount++
 				continue
 			}
-			stationID := uint32(row[0])
-			id := uint32(row[1])
-			if CommodityExists(id) == false {
-				badCommodityCount++
+			if registerCommodityListing(row, listings) {
+				count++
 			}
-			commodityListing := &gom.CommodityListing{
-				CommodityId:   id,
-				SupplyUnits:   uint32(row[2]),
-				SupplyCredits: uint32(row[3]),
-				DemandUnits:   uint32(row[4]),
-				DemandCredits: uint32(row[5]),
-				TimestampUtc:  row[6],
-			}
-			facilityListing, exists := facilityListings[stationID]
-			if exists == false {
-				facilityListing = &gom.FacilityListing{
-					Id:       stationID,
-					Listings: make([]*gom.CommodityListing, 16),
-				}
-				facilityListings[stationID] = facilityListing
-			}
-			facilityListing.Listings = append(facilityListing.Listings, commodityListing)
 		}
 
-		for stationID, facilityListing := range facilityListings {
+		log.Printf("Parsed %d commodity listings, processing.", count)
+
+		for stationID, listing := range listings {
 			marshalling <- parentCheck{
 				parentID: stationID,
-				entity:   facilityListing,
+				entity:   listing,
 			}
 		}
 	}()

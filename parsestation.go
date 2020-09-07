@@ -1,6 +1,7 @@
 package eddbtrans
 
 import (
+	"github.com/tidwall/gjson"
 	"io"
 	"strings"
 
@@ -17,21 +18,26 @@ func getFacilityType(typeId uint64) gom.FacilityType {
 	return gom.FacilityType_FTNone
 }
 
-func getPadSize(padSize string) gom.PadSize {
+func conditionalOr()
+
+func getPadSize(padSize string) gom.FeatureMasks {
 	switch strings.ToUpper(padSize) {
 	case "S":
-		return gom.PadSize_PadSmall
+		return gom.FeatureMasks_FeatSmallPad
 	case "M":
-		return gom.PadSize_PadMedium
+		return gom.FeatureMasks_FeatMediumPad
 	case "L":
-		return gom.PadSize_PadLarge
+		return gom.FeatureMasks_FeatLargePad
 	default:
-		return gom.PadSize_PadNone
+		return 0
 	}
 }
 
 // FacilityRegistry will provide facility-id checking for listings.
 var FacilityRegistry *Daycare
+
+func getFeatures(row []*gjson.Result, hasMarket, hasBlackMarket, hasRefuel, hasRepair, hasRearm, hasOutfitting, hasShipyard, hasDocking, hasCommodities, isPlanetary, padSize int) uint32 {
+}
 
 func ParseStationJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
 	registry := make(chan parentCheck, 1)
@@ -51,19 +57,7 @@ func ParseStationJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
 				TimestampUtc: station[2].Uint(),
 				SystemId:     systemID,
 				FacilityType: getFacilityType(station[4].Uint()),
-				Services: &gom.Services{
-					HasMarket:      station[5].Bool(),
-					HasBlackMarket: station[6].Bool(),
-					HasRefuel:      station[7].Bool(),
-					HasRepair:      station[8].Bool(),
-					HasRearm:       station[9].Bool(),
-					HasOutfitting:  station[10].Bool(),
-					HasShipyard:    station[11].Bool(),
-					HasDocking:     station[12].Bool(),
-					HasCommodities: station[13].Bool(),
-					IsPlanetary:    station[14].Bool(),
-				},
-				PadSize:    getPadSize(station[15].String()),
+				Features:     getFeatures(station, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15),
 				LsFromStar: uint32(station[16].Float()),
 				Government: getGovernmentType(station[17].Uint()),
 				Allegiance: getAllegianceType(station[18].Uint()),
