@@ -23,11 +23,13 @@ func convertValues(from [][]byte, into []uint64) (err error) {
 }
 
 func registerListing(stationID uint32, listing *gom.CommodityListing, facilityListings FacilityListings) {
+	// The current maximum number of commodities any station has listed.
+	const maxCommodities = 131
 	listings, exists := facilityListings[stationID]
 	if exists == false {
 		listings = &gom.FacilityListing{
 			Id:       stationID,
-			Listings: make([]*gom.CommodityListing, 0, 32),
+			Listings: make([]*gom.CommodityListing, 0, maxCommodities),
 		}
 		facilityListings[stationID] = listings
 	}

@@ -26,20 +26,20 @@ func maskForBit(bit gom.FeatureBit, basedOn bool) uint32 {
 	return value << bit
 }
 
-func getFeatures(row []*gjson.Result, hasMarket, hasBlackMarket, hasRefuel, hasRepair, hasRearm, hasOutfitting, hasShipyard, hasDocking, hasCommodities, isPlanetary, padSize int) uint32 {
+func getFeatures(row []*gjson.Result) uint32 {
 	var mask uint32
-	mask |= maskForBit(gom.FeatureBit_Market, row[hasMarket].Bool())
-	mask |= maskForBit(gom.FeatureBit_BlackMarket, row[hasBlackMarket].Bool())
-	mask |= maskForBit(gom.FeatureBit_Refuel, row[hasRefuel].Bool())
-	mask |= maskForBit(gom.FeatureBit_Repair, row[hasRepair].Bool())
-	mask |= maskForBit(gom.FeatureBit_Rearm, row[hasRearm].Bool())
-	mask |= maskForBit(gom.FeatureBit_Outfitting, row[hasOutfitting].Bool())
-	mask |= maskForBit(gom.FeatureBit_Shipyard, row[hasShipyard].Bool())
-	mask |= maskForBit(gom.FeatureBit_Docking, row[hasDocking].Bool())
-	mask |= maskForBit(gom.FeatureBit_Commodities, row[hasCommodities].Bool())
-	mask |= maskForBit(gom.FeatureBit_Planetary, row[isPlanetary].Bool())
-	if len(row[padSize].String()) != 0 {
-		pad := row[padSize].String()[0]
+	mask |= maskForBit(gom.FeatureBit_Market, row[5].Bool())
+	mask |= maskForBit(gom.FeatureBit_BlackMarket, row[6].Bool())
+	mask |= maskForBit(gom.FeatureBit_Refuel, row[7].Bool())
+	mask |= maskForBit(gom.FeatureBit_Repair, row[8].Bool())
+	mask |= maskForBit(gom.FeatureBit_Rearm, row[9].Bool())
+	mask |= maskForBit(gom.FeatureBit_Outfitting, row[10].Bool())
+	mask |= maskForBit(gom.FeatureBit_Shipyard, row[11].Bool())
+	mask |= maskForBit(gom.FeatureBit_Docking, row[12].Bool())
+	mask |= maskForBit(gom.FeatureBit_Commodities, row[13].Bool())
+	mask |= maskForBit(gom.FeatureBit_Planetary, row[14].Bool())
+	if len(row[15].String()) != 0 {
+		pad := row[15].String()[0]
 		mask |= maskForBit(gom.FeatureBit_SmallPad, pad == 'S')
 		mask |= maskForBit(gom.FeatureBit_MediumPad, pad == 'M')
 		mask |= maskForBit(gom.FeatureBit_LargePad, pad == 'L')
@@ -65,7 +65,7 @@ func ParseStationJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
 				TimestampUtc: station[2].Uint(),
 				SystemId:     systemID,
 				FacilityType: getFacilityType(station[4].Uint()),
-				Features:     getFeatures(station, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15),
+				Features:     getFeatures(station),
 				LsFromStar: uint32(station[16].Float()),
 				Government: getGovernmentType(station[17].Uint()),
 				Allegiance: getAllegianceType(station[18].Uint()),
