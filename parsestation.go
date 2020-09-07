@@ -1,14 +1,11 @@
 package eddbtrans
 
 import (
-	"github.com/tidwall/gjson"
-	"io"
-	"strings"
-
 	gom "github.com/kfsone/gomenacing/pkg/gomschema"
 	"github.com/kfsone/gomenacing/pkg/parsing"
-
+	"github.com/tidwall/gjson"
 	"google.golang.org/protobuf/proto"
+	"io"
 )
 
 func getFacilityType(typeId uint64) gom.FacilityType {
@@ -18,25 +15,36 @@ func getFacilityType(typeId uint64) gom.FacilityType {
 	return gom.FacilityType_FTNone
 }
 
-func conditionalOr()
-
-func getPadSize(padSize string) gom.FeatureMasks {
-	switch strings.ToUpper(padSize) {
-	case "S":
-		return gom.FeatureMasks_FeatSmallPad
-	case "M":
-		return gom.FeatureMasks_FeatMediumPad
-	case "L":
-		return gom.FeatureMasks_FeatLargePad
-	default:
-		return 0
-	}
-}
-
 // FacilityRegistry will provide facility-id checking for listings.
 var FacilityRegistry *Daycare
 
+func maskForBit(bit gom.FeatureBit, basedOn bool) uint32 {
+	var value uint32
+	if basedOn {
+		value = 1
+	}
+	return value << bit
+}
+
 func getFeatures(row []*gjson.Result, hasMarket, hasBlackMarket, hasRefuel, hasRepair, hasRearm, hasOutfitting, hasShipyard, hasDocking, hasCommodities, isPlanetary, padSize int) uint32 {
+	var mask uint32
+	mask |= maskForBit(gom.FeatureBit_Market, row[hasMarket].Bool())
+	mask |= maskForBit(gom.FeatureBit_BlackMarket, row[hasBlackMarket].Bool())
+	mask |= maskForBit(gom.FeatureBit_Refuel, row[hasRefuel].Bool())
+	mask |= maskForBit(gom.FeatureBit_Repair, row[hasRepair].Bool())
+	mask |= maskForBit(gom.FeatureBit_Rearm, row[hasRearm].Bool())
+	mask |= maskForBit(gom.FeatureBit_Outfitting, row[hasOutfitting].Bool())
+	mask |= maskForBit(gom.FeatureBit_Shipyard, row[hasShipyard].Bool())
+	mask |= maskForBit(gom.FeatureBit_Docking, row[hasDocking].Bool())
+	mask |= maskForBit(gom.FeatureBit_Commodities, row[hasCommodities].Bool())
+	mask |= maskForBit(gom.FeatureBit_Planetary, row[isPlanetary].Bool())
+	if len(row[padSize].String()) != 0 {
+		pad := row[padSize].String()[0]
+		mask |= maskForBit(gom.FeatureBit_SmallPad, pad == 'S')
+		mask |= maskForBit(gom.FeatureBit_MediumPad, pad == 'M')
+		mask |= maskForBit(gom.FeatureBit_LargePad, pad == 'L')
+	}
+	return mask
 }
 
 func ParseStationJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
