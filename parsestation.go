@@ -9,10 +9,38 @@ import (
 )
 
 func getFacilityType(typeId uint64) gom.FacilityType {
-	if _, ok := gom.FacilityType_name[int32(typeId)]; ok {
-		return gom.FacilityType(typeId)
+	switch typeId {
+	case 1:
+		return gom.FacilityType_FTCivilianOutpost
+	case 2:
+		return gom.FacilityType_FTCommercialOutpost
+	case 3:
+		return gom.FacilityType_FTCoriolisStarport
+	case 4:
+		return gom.FacilityType_FTIndustrialOutpost
+	case 5:
+		return gom.FacilityType_FTMilitaryOutpost
+	case 6:
+		return gom.FacilityType_FTMiningOutpost
+	case 7:
+		return gom.FacilityType_FTOcellusStarport
+	case 8:
+		return gom.FacilityType_FTOrbisStarport
+	case 9:
+		return gom.FacilityType_FTScientificOutpost
+	case 13:
+		return gom.FacilityType_FTPlanetaryOutpost
+	case 14:
+		return gom.FacilityType_FTPlanetaryPort
+	case 19:
+		return gom.FacilityType_FTMegaship
+	case 20:
+		return gom.FacilityType_FTAsteroidBase
+	case 24:
+		return gom.FacilityType_FTFleetCarrier
+	default:
+		return gom.FacilityType_FTNone
 	}
-	return gom.FacilityType_FTNone
 }
 
 // FacilityRegistry will provide facility-id checking for listings.
@@ -52,9 +80,6 @@ func ParseStationJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
 
 	go func() {
 		defer close(registry)
-		if FacilityRegistry != nil {
-			defer FacilityRegistry.CloseRegistration()
-		}
 		stations := parsing.ParseJSONLines(source, getStationFields())
 		for station := range stations {
 			facilityID := uint32(station[0].Uint())
@@ -74,7 +99,6 @@ func ParseStationJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
 				panic(err)
 			} else {
 				registry <- parentCheck{parentID: systemID, entity: parsing.EntityPacket{ObjectId: facilityID, Data: data}}
-				FacilityRegistry.Register(facilityID)
 			}
 		}
 	}()
@@ -91,8 +115,10 @@ func ParseStationJSONL(source io.Reader) (<-chan parsing.EntityPacket, error) {
 		// Consume the approvals and forward them to channel
 		go func() {
 			defer close(channel)
+			defer FacilityRegistry.CloseRegistration()
 			for approved := range SystemRegistry.Approvals() {
 				channel <- approved.(parsing.EntityPacket)
+				FacilityRegistry.Register(approved.(parsing.EntityPacket).ObjectId)
 			}
 		}()
 	} else {

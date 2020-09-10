@@ -23,46 +23,22 @@ func main() {
 	}
 
 	start := time.Now()
-	items, err := gom.ReadGOMFile(file)
+	gomFile, err := gom.OpenGOMFile(file)
+	if err != nil {
+		panic(err)
+	}
+	defer gomFile.Close()
+	items, err := gomFile.Load()
 	if err != nil {
 		panic(err)
 	}
 	log.Printf("Took %s\n", time.Since(start))
 
-	switch list := items.(type) {
-	case []gom.Commodity:
-		for idx, item := range list {
-			if idx >= 10 {
-				fmt.Println("...")
-				return
-			}
-			fmt.Printf("%v\n", item)
+	for idx, item := range items {
+		if idx >= 3 {
+			fmt.Println("...")
+			return
 		}
-	case []gom.System:
-		for idx, item := range list {
-			if idx >= 10 {
-				fmt.Println("...")
-				return
-			}
-			fmt.Printf("%v\n", item)
-		}
-	case []gom.Facility:
-		for idx, item := range list {
-			if idx >= 10 {
-				fmt.Println("...")
-				return
-			}
-			fmt.Printf("%v\n", item)
-		}
-	case []gom.FacilityListing:
-		for idx, item := range list {
-			if idx >= 10 {
-				fmt.Println("...")
-				return
-			}
-			fmt.Printf("%v\n", item)
-		}
-	default:
-		fmt.Printf("Unrecognized type.")
+		fmt.Printf("%v\n", item)
 	}
 }

@@ -1,121 +1,115 @@
 package eddbtrans
 
 import (
-	"io"
-	"log"
-	"strconv"
-
 	gom "github.com/kfsone/gomenacing/pkg/gomschema"
 	"github.com/kfsone/gomenacing/pkg/parsing"
 	"google.golang.org/protobuf/proto"
+	"io"
+	"log"
 )
 
 type FacilityListings map[uint32]*gom.FacilityListing
 
-func convertValues(from [][]byte, into []uint64) (err error) {
-	for idx, value := range from {
-		into[idx], err = strconv.ParseUint(string(value), 10, 64)
-		if err != nil {
-			return err
+func aggregateListings(rows <-chan []uint64) <-chan []*[]uint64 {
+	channel := make(chan []*[]uint64, 2)
+	go func() {
+		defer close(channel)
+		seen := make(map[uint32]bool, 80000)
+		last := uint32(0)
+
+		var aggregate []*[]uint64
+
+		for columns := range rows {
+			stationID := uint32(columns[0])
+			if stationID == 0 || uint64(stationID) != columns[0] {
+				log.Printf("invalid facility id: %d", stationID)
+				continue
+			}
+
+			id := uint32(columns[1])
+			if CommodityExists(id) == false {
+				log.Printf("facility %d: unrecognized commodity: %d", stationID, id)
+			}
+
+			if stationID != last {
+				if seen[stationID] == true {
+					log.Fatalf("multiple listings for facility: %d", stationID)
+				}
+				seen[stationID] = true
+				if aggregate != nil {
+					channel <- aggregate
+				}
+				aggregate = make([]*[]uint64, 0, 32)
+				last = stationID
+			}
+
+			aggregate = append(aggregate, &columns)
 		}
-	}
-	return nil
+
+		if aggregate != nil {
+			channel <- aggregate
+		}
+	}()
+	return channel
 }
 
-func registerListing(stationID uint32, listing *gom.CommodityListing, facilityListings FacilityListings) {
-	// The current maximum number of commodities any station has listed.
-	const maxCommodities = 131
-	listings, exists := facilityListings[stationID]
-	if exists == false {
-		listings = &gom.FacilityListing{
-			Id:       stationID,
-			Listings: make([]*gom.CommodityListing, 0, maxCommodities),
+func convertToListingMessages(aggregates <-chan []*[]uint64) <-chan parentCheck {
+	channel := make(chan parentCheck, 1)
+	go func() {
+		defer close(channel)
+
+		for aggregate := range aggregates {
+			stationID := (*aggregate[0])[0]
+			// Try and add this commodity to the existing FacilityListing, or generate a new one
+			// if we've moved to a new facility.
+
+			listing := &gom.FacilityListing{Id: uint32(stationID), Listings: make([]*gom.CommodityListing, len(aggregate))}
+			listings := make([]gom.CommodityListing, len(aggregate))
+			for idx, values := range aggregate {
+				row := *values
+				listings[idx].CommodityId = uint32(row[1])
+				listings[idx].SupplyUnits = uint32(row[2])
+				listings[idx].SupplyCredits = uint32(row[3])
+				listings[idx].DemandUnits =   uint32(row[4])
+				listings[idx].DemandCredits = uint32(row[5])
+				listings[idx].TimestampUtc =  row[6]
+				listing.Listings[idx] = &listings[idx]
+			}
+
+			data, err := proto.Marshal(listing)
+			if err != nil {
+				log.Printf("unable to marshal facility %d: %s", listing.Id, err)
+				continue
+			}
+
+			channel <- parentCheck{ parentID: listing.Id,
+				entity:   parsing.EntityPacket{ObjectId: listing.Id, Data: data},
+			}
 		}
-		facilityListings[stationID] = listings
-	}
+	}()
 
-	listings.Listings = append(listings.Listings, listing)
-}
-
-func registerCommodityListing(row []uint64, facilityListings FacilityListings) bool {
-	// Check station ID for 0 and truncation
-	stationID := uint32(row[0])
-	if stationID == 0 || uint64(stationID) != row[0] {
-		return false
-	}
-
-	id := uint32(row[1])
-	if CommodityExists(id) == false {
-		return false
-	}
-
-	listing := &gom.CommodityListing{
-		CommodityId:   id,
-		SupplyUnits:   uint32(row[2]),
-		SupplyCredits: uint32(row[3]),
-		DemandUnits:   uint32(row[4]),
-		DemandCredits: uint32(row[5]),
-		TimestampUtc:  row[6],
-	}
-
-	registerListing(stationID, listing, facilityListings)
-
-	return true
+	return channel
 }
 
 func ParseListingsCSV(source io.Reader) (<-chan parsing.EntityPacket, error) {
-	// We'll marshal all the listings for a station together and writ t
-	listings := make(FacilityListings, 80000)
+	// Convert incoming values to uint64s
+	uint64Listings, err := parsing.ParseCSVToUint64s(source, getListingFields())
+	if err != nil {
+		return nil, err
+	}
 
-	// channel we'll use to ask daycare if stations are registered
-	marshalling := make(chan parentCheck)
-	go func() {
-		defer close(marshalling)
+	// Group commodities together into FacilityListing objects
+	aggregates := aggregateListings(uint64Listings)
 
-		count := 0
-		rows, err := parsing.ParseCSV(source, getListingFields())
-		row := make([]uint64, len(getListingFields()))
-		ErrIsBad(err)
-		for columns := range rows {
-			err = convertValues(columns, row)
-			if err != nil {
-				continue
-			}
-			if registerCommodityListing(row, listings) {
-				count++
-			}
-		}
+	// Convert listing aggregates to facility listings
+	messages := convertToListingMessages(aggregates)
 
-		log.Printf("Parsed %d commodity listings, processing.", count)
-
-		for stationID, listing := range listings {
-			marshalling <- parentCheck{
-				parentID: stationID,
-				entity:   listing,
-			}
-		}
-	}()
-
-	// Marshall incoming stations. It's likely to take a few cycles so worth concurrency.
-	registry := make(chan parentCheck)
-	go func() {
-		defer close(registry)
-		for incoming := range marshalling {
-			data, err := proto.Marshal(incoming.entity.(*gom.FacilityListing))
-			if err != nil {
-				log.Printf("Marshalling err for station %d", incoming.parentID)
-				continue
-			}
-			registry <- parentCheck{parentID: incoming.parentID, entity: parsing.EntityPacket{ObjectId: incoming.parentID, Data: data}}
-		}
-	}()
-
-	channel := make(chan parsing.EntityPacket, 1)
+	channel := make(chan parsing.EntityPacket)
 	if FacilityRegistry != nil {
 		// Schedule the lookups
 		go func() {
 			defer FacilityRegistry.CloseLookups()
-			for check := range registry {
+			for check := range messages {
 				FacilityRegistry.Lookup(check.parentID, check.entity)
 			}
 		}()
@@ -129,7 +123,7 @@ func ParseListingsCSV(source io.Reader) (<-chan parsing.EntityPacket, error) {
 	} else {
 		go func() {
 			defer close(channel)
-			for check := range registry {
+			for check := range messages {
 				channel <- check.entity.(parsing.EntityPacket)
 			}
 		}()

@@ -32,6 +32,7 @@ type Daycare struct {
 // Close releases memory used by the Daycare once the registrations and inquiries
 // channels have been closed.
 func (dc *Daycare) Close() (err error) {
+	<- dc.approvals
 	dc.registry = nil
 	return nil
 }
@@ -78,7 +79,6 @@ func (dc *Daycare) register(id uint32) {
 		} else {
 			dc.Duplicate++
 		}
-		// Clear the list
 	} else {
 		dc.Registered++
 	}
@@ -111,7 +111,7 @@ func (dc *Daycare) lookup(check parentCheck) {
 func OpenDayCare() (dc *Daycare) {
 	// Create the instance with channels.
 	dc = &Daycare{
-		requests:  make(chan interface{}, 1),
+		requests:  make(chan interface{}, 4),
 		approvals: make(chan interface{}, 1),
 		registry:  make(map[uint32][]interface{}),
 	}
